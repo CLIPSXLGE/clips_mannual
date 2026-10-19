@@ -1,0 +1,1281 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLIPS 조별 명패 자동 생성기</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+
+    :root {
+      --app-bg: #f4f6f8;
+      --panel-bg: #ffffff;
+      --border: #d9dee5;
+      --muted: #707782;
+      --text: #1b1f24;
+      --primary: #111827;
+      --primary-hover: #000000;
+      --main-color: #153E75;
+      --program-text-color: #ffffff;
+      --nameplate-font: 'Pretendard';
+      --nameplate-weight: 700;
+      --preview-scale: 0.62;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      font-family: 'Pretendard', Arial, sans-serif;
+      color: var(--text);
+      background: var(--app-bg);
+    }
+
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+
+    .app-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 64px;
+      padding: 0 28px;
+      background: #fff;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand-wrap { display: flex; align-items: baseline; gap: 12px; }
+    .brand-title { font-size: 21px; font-weight: 800; letter-spacing: -0.03em; }
+    .brand-sub { color: var(--muted); font-size: 12px; }
+
+    .app-grid {
+      flex: 1;
+      display: grid;
+      grid-template-columns: minmax(270px, 0.9fr) minmax(270px, 0.85fr) minmax(430px, 1.4fr);
+      gap: 16px;
+      padding: 16px;
+      min-height: 0;
+    }
+
+    .panel {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      min-width: 0;
+      overflow: hidden;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.035);
+    }
+
+    .panel-header {
+      min-height: 52px;
+      padding: 14px 18px;
+      border-bottom: 1px solid #eceff3;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-weight: 800;
+    }
+
+    .panel-body { padding: 18px; }
+
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+    .label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 7px;
+    }
+    .field label, .field-title { font-size: 13px; font-weight: 750; }
+    .hint { color: var(--muted); font-size: 11px; font-weight: 500; }
+
+    .text-input, .select-input, .number-input {
+      width: 100%;
+      height: 40px;
+      border: 1px solid #cfd5dd;
+      border-radius: 9px;
+      padding: 0 11px;
+      color: var(--text);
+      background: #fff;
+      outline: none;
+    }
+    .text-input:focus, .select-input:focus, .number-input:focus {
+      border-color: #6b7280;
+      box-shadow: 0 0 0 3px rgba(17,24,39,.06);
+    }
+
+    .color-line {
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+    .color-picker {
+      width: 48px;
+      height: 40px;
+      border: 1px solid #cfd5dd;
+      border-radius: 9px;
+      padding: 3px;
+      background: #fff;
+    }
+
+    .font-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    .btn {
+      min-height: 40px;
+      border-radius: 9px;
+      border: 1px solid #cfd5dd;
+      padding: 9px 13px;
+      background: #fff;
+      color: #20242a;
+      font-weight: 700;
+    }
+    .btn:hover { background: #f6f7f9; }
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-danger { color: #b42318; }
+    .btn-block { width: 100%; }
+    .btn-sm { min-height: 34px; padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+
+    .saved-project-dropdown {
+      position: relative;
+      margin-bottom: 18px;
+    }
+
+    .saved-project-trigger {
+      width: 100%;
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid #cfd5dd;
+      border-radius: 9px;
+      padding: 9px 11px;
+      background: #fff;
+      color: #20242a;
+      font-weight: 750;
+      text-align: left;
+    }
+    .saved-project-trigger:hover { background: #f6f7f9; }
+    .saved-project-trigger .toggle-icon { transition: transform .18s ease; }
+    .saved-project-trigger.open .toggle-icon { transform: rotate(180deg); }
+
+    .saved-project-menu {
+      display: none;
+      position: absolute;
+      z-index: 30;
+      left: 0;
+      right: 0;
+      top: calc(100% + 6px);
+      border: 1px solid #d8dee6;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 10px 28px rgba(16, 24, 40, .14);
+    }
+    .saved-project-menu.open { display: block; }
+    .saved-projects-list { max-height: 260px; overflow: auto; }
+    .saved-project-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: stretch;
+      padding: 0;
+      border-bottom: 1px solid #edf0f3;
+    }
+    .saved-project-item:last-child { border-bottom: none; }
+    .saved-project-load-area {
+      min-width: 0;
+      border: 0;
+      background: #fff;
+      padding: 10px 12px;
+      text-align: left;
+      cursor: pointer;
+    }
+    .saved-project-load-area:hover { background: #f7f9fc; }
+    .saved-project-meta { min-width: 0; }
+    .saved-project-name {
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .saved-project-date { margin-top: 2px; font-size: 10px; color: var(--muted); }
+    .saved-project-delete {
+      align-self: center;
+      margin-right: 9px;
+      min-height: 32px;
+      padding: 5px 9px;
+    }
+    .saved-project-empty { padding: 18px 12px; text-align: center; color: var(--muted); font-size: 12px; }
+
+    .group-count-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .group-toolbar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .group-list {
+      border: 1px solid #e2e6eb;
+      border-radius: 10px;
+      overflow: auto;
+      max-height: calc(100vh - 310px);
+      min-height: 280px;
+      background: #fbfcfd;
+    }
+
+    .group-row {
+      display: grid;
+      grid-template-columns: 30px 1fr 32px;
+      gap: 7px;
+      align-items: center;
+      padding: 8px 9px;
+      border-bottom: 1px solid #edf0f3;
+      background: #fff;
+      transition: background .15s ease;
+    }
+    .group-row:last-child { border-bottom: none; }
+    .group-row.preview-active { background: #f0f6ff; box-shadow: inset 3px 0 0 #2563eb; }
+    .group-row:hover { background: #f8fafc; }
+    .group-row.preview-active:hover { background: #f0f6ff; }
+    .group-row input[type="checkbox"] { width: 17px; height: 17px; }
+    .group-name-input {
+      width: 100%;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 6px 7px;
+      outline: none;
+      background: transparent;
+      font-weight: 700;
+    }
+    .group-name-input:focus { border-color: #cfd5dd; background: #fff; }
+    .row-delete {
+      width: 28px; height: 28px; border: 0; border-radius: 7px;
+      background: transparent; color: #949ba5; font-size: 18px; line-height: 1;
+    }
+    .row-delete:hover { background: #fff0f0; color: #b42318; }
+
+    .preview-panel { display: flex; flex-direction: column; min-height: 0; }
+    .preview-panel .panel-body {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      flex: 1;
+      padding: 18px;
+    }
+
+    .preview-stage {
+      flex: 1;
+      min-height: 560px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        linear-gradient(45deg,#f7f8fa 25%,transparent 25%),
+        linear-gradient(-45deg,#f7f8fa 25%,transparent 25%),
+        linear-gradient(45deg,transparent 75%,#f7f8fa 75%),
+        linear-gradient(-45deg,transparent 75%,#f7f8fa 75%),
+        #eef1f4;
+      background-size: 24px 24px;
+      background-position: 0 0,0 12px,12px -12px,-12px 0;
+      border: 1px solid #dfe4ea;
+      border-radius: 12px;
+      overflow: auto;
+      padding: 24px;
+    }
+
+    .preview-zoom-wrap {
+      width: calc(148mm * var(--preview-scale));
+      height: calc(210mm * var(--preview-scale));
+      position: relative;
+      flex: none;
+    }
+    .preview-zoom-wrap .nameplate-page {
+      transform: scale(var(--preview-scale));
+      transform-origin: top left;
+      box-shadow: 0 14px 36px rgba(15,23,42,.18);
+    }
+
+    .actions-under-preview {
+      border-top: 1px solid #eceff3;
+      margin-top: 16px;
+      padding-top: 16px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .bold-row {
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 0 3px;
+      font-weight: 750;
+      font-size: 14px;
+    }
+    .bold-row input { width: 18px; height: 18px; }
+
+    .print-guide {
+      margin-top: -4px;
+      padding: 0 4px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.45;
+      text-align: center;
+    }
+
+    .status-box {
+      margin-top: 9px;
+      min-height: 20px;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.5;
+    }
+    .status-box.error { color: #b42318; }
+    .status-box.success { color: #087443; }
+
+    /* ===== A5 NAMEPLATE ===== */
+    .nameplate-page {
+      width: 148mm;
+      height: 210mm;
+      background: #fff;
+      position: relative;
+      overflow: hidden;
+      color: var(--main-color);
+      font-family: var(--nameplate-font), 'Pretendard', sans-serif;
+      font-weight: var(--nameplate-weight);
+      break-after: page;
+      page-break-after: always;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+
+    /*
+     * A5 템플릿 기준 절대좌표
+     * 원본 Google Slides 템플릿: 148 × 210 mm
+     * 좌우 유효 폭: 139.175 mm / left 4.4125 mm
+     */
+    .edge-line,
+    .program-bar,
+    .group-zone {
+      position: absolute;
+      box-sizing: border-box;
+    }
+
+    .edge-line {
+      left: 4.4125mm;
+      width: 139.175mm;
+      height: 2.275mm;
+      background: var(--main-color);
+    }
+    .edge-line.top-line { top: 48.3043mm; }
+    .edge-line.bottom-line { top: 160.6765mm; }
+
+    .group-zone {
+      left: 0;
+      width: 148mm;
+      height: 35.0583mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 0 2.54mm;
+    }
+    /*
+     * 조 명 세로 위치
+     * - 각 조 명을 상/하단의 빈 영역(라인 ↔ 교육명 띠) 정중앙에 맞춘 뒤
+     * - 윗면은 0.5mm 위로, 아랫면은 0.5mm 아래로 추가 보정
+     *   (윗면은 180° 회전되어 실제 접었을 때 동일한 방향의 0.5mm 하향 효과)
+     */
+    .group-zone.group-top {
+      top: 53.3602mm;
+      transform: rotate(180deg);
+      transform-origin: center center;
+    }
+    .group-zone.group-bottom { top: 123.0415mm; }
+
+    .group-text {
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-align: center;
+      line-height: 1;
+      font-family: inherit;
+      font-size: 70pt;
+      letter-spacing: 0;
+      color: var(--main-color);
+      font-weight: inherit;
+    }
+
+    .program-bar {
+      left: 4.4125mm;
+      width: 139.175mm;
+      height: 11.225mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 2.54mm;
+      background: var(--main-color);
+      overflow: hidden;
+    }
+    /* 교육명 위치 미세 보정
+     * - 윗면 교육명: 0.1mm 상향
+     * - 아랫면 교육명: 0.1mm 하향
+     */
+    .program-bar.program-top { top: 92.0994mm; }
+    .program-bar.program-bottom { top: 108.3397mm; }
+
+    .program-text {
+      width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-align: center;
+      line-height: 1;
+      color: var(--program-text-color);
+      font-family: inherit;
+      font-size: 15pt;
+      letter-spacing: 0;
+      font-weight: inherit;
+    }
+    .program-top .program-text {
+      transform: rotate(180deg);
+      transform-origin: center center;
+    }
+
+    /* 미리보기에서만 중앙 접힘 위치를 확인하기 위한 가이드 */
+    .fold-guide {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 105mm;
+      border-top: .25mm dashed rgba(148,155,165,.28);
+      pointer-events: none;
+    }
+
+    #printContainer { display: none; }
+
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 9999;
+      background: rgba(15,23,42,.45);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      width: min(620px, 100%);
+      max-height: 80vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 24px 64px rgba(0,0,0,.22);
+      border: 1px solid #dfe4ea;
+    }
+    .modal-header { padding: 16px 18px; border-bottom: 1px solid #eceff3; font-weight: 800; }
+    .modal-body { padding: 18px; }
+    .modal-footer { padding: 14px 18px; border-top: 1px solid #eceff3; display: flex; justify-content: flex-end; gap: 8px; }
+    .font-upload-list { display: grid; gap: 8px; margin-top: 12px; }
+    .font-chip { padding: 9px 10px; border: 1px solid #e0e5ea; border-radius: 8px; font-size: 12px; background: #fafbfc; }
+
+
+    /* 화면 미리보기는 62% 축소 표시. 실제 인쇄/PDF는 A5 100% 유지 */
+    @media (max-width: 1180px) {
+      .app-grid { grid-template-columns: 1fr 1fr; }
+      .preview-panel { grid-column: 1 / -1; }
+      .preview-stage { min-height: 650px; }
+    }
+
+    @media (max-width: 760px) {
+      .app-grid { grid-template-columns: 1fr; }
+      .preview-panel { grid-column: auto; }
+      .topbar { padding: 0 16px; }
+      .brand-sub { display: none; }
+    }
+
+    @page {
+      size: A5 portrait;
+      margin: 0;
+    }
+
+    @media print {
+      html, body {
+        width: 148mm;
+        height: auto;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+      }
+
+      /* 앱 화면 자체를 인쇄 레이아웃에서 완전히 제거해 빈 페이지가 생기지 않도록 함 */
+      .app-shell,
+      .modal-backdrop {
+        display: none !important;
+      }
+
+      #printContainer {
+        display: block !important;
+        position: static !important;
+        width: 148mm;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+
+      #printContainer .nameplate-page {
+        display: block !important;
+        width: 148mm !important;
+        height: 210mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        box-shadow: none !important;
+        transform: none !important;
+        break-after: page;
+        page-break-after: always;
+      }
+
+      /* 마지막 명패 뒤에는 추가 페이지를 만들지 않음 */
+      #printContainer .nameplate-page:last-child {
+        break-after: auto !important;
+        page-break-after: auto !important;
+      }
+
+      .fold-guide { display: none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="brand-title">CLIPS 조별 명패 자동 생성기</div>
+      <div class="brand-sub">A5 · 실시간 미리보기 · 외부 폰트 지원</div>
+    </div>
+    <div class="brand-sub">기본 폰트: Pretendard</div>
+  </header>
+
+  <main class="app-grid">
+    <!-- LEFT: PROJECT SETTINGS -->
+    <section class="panel">
+      <div class="panel-header">프로젝트 설정</div>
+      <div class="panel-body">
+        <div class="saved-project-dropdown">
+          <button id="savedProjectTrigger" class="saved-project-trigger" type="button" aria-expanded="false">
+            <span>저장 프로젝트 불러오기</span>
+            <span class="toggle-icon">⌄</span>
+          </button>
+          <div id="savedProjectMenu" class="saved-project-menu">
+            <div id="savedProjectsList" class="saved-projects-list"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label-row"><label for="projectName">프로젝트명</label></div>
+          <input id="projectName" class="text-input" type="text" placeholder="예: CLIPS컨설팅 전사원 워크숍" />
+        </div>
+
+        <div class="field">
+          <div class="label-row"><label for="programName">교육명</label><span class="hint">명패에 출력</span></div>
+          <input id="programName" class="text-input" type="text" placeholder="교육명을 입력하세요" />
+        </div>
+
+        <div class="field">
+          <div class="label-row"><span class="field-title">메인색상</span><span class="hint">라인 · 교육명 배경 · 조 명</span></div>
+          <div class="color-line">
+            <input id="mainColorPicker" class="color-picker" type="color" value="#153e75" />
+            <input id="mainColorHex" class="text-input" type="text" value="#153E75" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label-row"><span class="field-title">교육명 글자색</span></div>
+          <div class="color-line">
+            <input id="programTextColorPicker" class="color-picker" type="color" value="#ffffff" />
+            <input id="programTextColorHex" class="text-input" type="text" value="#FFFFFF" maxlength="7" />
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label-row"><label for="fontSelect">폰트</label><span class="hint">명패 전체 공통</span></div>
+          <div class="font-row">
+            <select id="fontSelect" class="select-input">
+              <option value="Pretendard">Pretendard</option>
+            </select>
+            <button id="openFontModalBtn" class="btn" type="button">+ 폰트 추가</button>
+          </div>
+          <div id="fontStatus" class="status-box"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CENTER: GROUPS -->
+    <section class="panel">
+      <div class="panel-header">조 목록 <span id="selectedCount" class="hint">0개 출력</span></div>
+      <div class="panel-body">
+        <div class="group-count-row">
+          <input id="groupCount" class="number-input" type="number" min="1" max="100" value="1" aria-label="조 수" />
+          <button id="generateGroupsBtn" class="btn" type="button">목록 생성</button>
+        </div>
+
+        <div class="group-toolbar">
+          <button id="selectAllBtn" class="btn btn-sm" type="button">전체 선택</button>
+          <button id="clearAllBtn" class="btn btn-sm" type="button">전체 해제</button>
+        </div>
+
+        <div id="groupList" class="group-list"></div>
+
+        <button id="addGroupBtn" class="btn btn-block" style="margin-top:12px" type="button">+ 조 추가</button>
+      </div>
+    </section>
+
+    <!-- RIGHT: PREVIEW -->
+    <section class="panel preview-panel">
+      <div class="panel-header">조 명패 미리보기 <span id="previewLabel" class="hint"></span></div>
+      <div class="panel-body">
+        <div class="preview-stage">
+          <div class="preview-zoom-wrap">
+            <div id="previewNameplate" class="nameplate-page"></div>
+          </div>
+        </div>
+
+        <div class="actions-under-preview">
+          <label class="bold-row">
+            <input id="boldCheckbox" type="checkbox" checked />
+            <span>Bold 효과</span>
+          </label>
+
+          <button id="printBtn" class="btn btn-primary btn-block" type="button">명패 인쇄 / PDF</button>
+          <div class="print-guide">출력 설정 : A5 용지 / 단면인쇄 / 다목적용지함 / 아카이브용지</div>
+          <button id="saveProjectBtn" class="btn btn-block" type="button">프로젝트 저장</button>
+          <div id="appStatus" class="status-box"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="printContainer"></div>
+
+<!-- FONT MODAL -->
+<div id="fontModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="fontModalTitle">
+  <div class="modal">
+    <div id="fontModalTitle" class="modal-header">외부 폰트 추가</div>
+    <div class="modal-body">
+      <div style="font-size:13px; line-height:1.65; color:#4b5563">
+        TTF, OTF, WOFF, WOFF2 파일을 추가할 수 있습니다. 여러 파일을 동시에 선택할 수 있으며,
+        파일명에 <b>Bold</b> 또는 <b>700</b>이 포함된 경우 같은 폰트의 Bold 파일로 우선 등록합니다.
+        추가한 폰트는 이 브라우저에 저장됩니다.
+      </div>
+      <input id="fontFileInput" type="file" accept=".ttf,.otf,.woff,.woff2,font/ttf,font/otf,font/woff,font/woff2" multiple style="margin-top:16px" />
+      <div id="fontUploadList" class="font-upload-list"></div>
+    </div>
+    <div class="modal-footer">
+      <button id="closeFontModalBtn" class="btn" type="button">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  const els = {
+    projectName: $('#projectName'),
+    programName: $('#programName'),
+    mainColorPicker: $('#mainColorPicker'),
+    mainColorHex: $('#mainColorHex'),
+    programTextColorPicker: $('#programTextColorPicker'),
+    programTextColorHex: $('#programTextColorHex'),
+    fontSelect: $('#fontSelect'),
+    fontStatus: $('#fontStatus'),
+    groupCount: $('#groupCount'),
+    groupList: $('#groupList'),
+    selectedCount: $('#selectedCount'),
+    previewLabel: $('#previewLabel'),
+    previewNameplate: $('#previewNameplate'),
+    boldCheckbox: $('#boldCheckbox'),
+    appStatus: $('#appStatus'),
+    savedProjectTrigger: $('#savedProjectTrigger'),
+    savedProjectMenu: $('#savedProjectMenu'),
+    savedProjectsList: $('#savedProjectsList'),
+    printContainer: $('#printContainer'),
+    fontModal: $('#fontModal'),
+    fontFileInput: $('#fontFileInput'),
+    fontUploadList: $('#fontUploadList')
+  };
+
+  const state = {
+    groups: [],
+    previewGroupId: null,
+    fonts: new Map(), // family => {400:boolean, 700:boolean}
+  };
+
+  const PROJECT_STORAGE_KEY = 'clips_group_nameplate_projects_v1';
+  const DB_NAME = 'clips_group_nameplate_db';
+  const DB_VERSION = 1;
+  const FONT_STORE = 'fonts';
+
+  function uid() {
+    return 'g_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+  }
+
+  function escapeHtml(str='') {
+    return String(str)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function isValidHex(value) {
+    return /^#[0-9A-Fa-f]{6}$/.test(String(value).trim());
+  }
+
+  function normalizeHex(value, fallback) {
+    const v = String(value || '').trim();
+    return isValidHex(v) ? v.toUpperCase() : fallback;
+  }
+
+  function setStatus(message, type='') {
+    els.appStatus.textContent = message || '';
+    els.appStatus.className = 'status-box' + (type ? ' ' + type : '');
+  }
+
+  function getSettings() {
+    return {
+      projectName: els.projectName.value.trim(),
+      programName: els.programName.value.trim(),
+      mainColor: normalizeHex(els.mainColorHex.value, '#153E75'),
+      programTextColor: normalizeHex(els.programTextColorHex.value, '#FFFFFF'),
+      fontFamily: els.fontSelect.value || 'Pretendard',
+      bold: els.boldCheckbox.checked
+    };
+  }
+
+  function applyCssVariables(target, settings) {
+    target.style.setProperty('--main-color', settings.mainColor);
+    target.style.setProperty('--program-text-color', settings.programTextColor);
+    target.style.setProperty('--nameplate-font', JSON.stringify(settings.fontFamily));
+    target.style.setProperty('--nameplate-weight', settings.bold ? '700' : '400');
+  }
+
+  function nameplateMarkup(groupName, programName) {
+    const g = escapeHtml(groupName || '1조');
+    const p = escapeHtml(programName || '교육명을 입력하세요');
+    return `
+      <div class="edge-line top-line"></div>
+      <div class="group-zone group-top"><div class="group-text">${g}</div></div>
+      <div class="program-bar program-top"><div class="program-text">${p}</div></div>
+      <div class="program-bar program-bottom"><div class="program-text">${p}</div></div>
+      <div class="group-zone group-bottom"><div class="group-text">${g}</div></div>
+      <div class="edge-line bottom-line"></div>
+      <div class="fold-guide"></div>
+    `;
+  }
+
+  function getPreviewGroup() {
+    return state.groups.find(g => g.id === state.previewGroupId)
+      || state.groups.find(g => g.enabled)
+      || state.groups[0]
+      || { id: null, name: '1조', enabled: true };
+  }
+
+  function renderPreview() {
+    const settings = getSettings();
+    const group = getPreviewGroup();
+    els.previewNameplate.innerHTML = nameplateMarkup(group.name, settings.programName);
+    applyCssVariables(els.previewNameplate, settings);
+    els.previewLabel.textContent = group.name ? `현재: ${group.name}` : '';
+    requestAnimationFrame(() => fitAllText(els.previewNameplate));
+  }
+
+  function fitSingleLinePt(el, { maxPt, minPt, stepPt=0.5 }) {
+    if (!el) return;
+    let size = maxPt;
+    el.style.fontSize = size + 'pt';
+    el.style.whiteSpace = 'nowrap';
+    el.style.textOverflow = 'clip';
+
+    // 한 줄 출력은 가로 폭만 기준으로 축소합니다.
+    // 폰트의 line-height/글리프 높이 때문에 세로가 넘친 것으로 잘못 판단해
+    // 조 명이 70pt에서 과도하게 축소되는 현상을 방지합니다.
+    while (
+      size > minPt &&
+      el.scrollWidth > el.clientWidth
+    ) {
+      size = Math.max(minPt, size - stepPt);
+      el.style.fontSize = size + 'pt';
+    }
+  }
+
+  function fitAllText(root) {
+    // 원본 템플릿: 교육명 15pt / 조 명 70pt.
+    // 짧은 문구는 원본 크기를 유지하고, 영역을 넘을 때만 축소합니다.
+    root.querySelectorAll('.program-text').forEach(el =>
+      fitSingleLinePt(el, { maxPt: 15, minPt: 8, stepPt: 0.5 })
+    );
+    root.querySelectorAll('.group-text').forEach(el =>
+      fitSingleLinePt(el, { maxPt: 70, minPt: 28, stepPt: 1 })
+    );
+  }
+
+  function updateSelectedCount() {
+    const count = state.groups.filter(g => g.enabled).length;
+    els.selectedCount.textContent = `${count}개 출력`;
+  }
+
+  function renderGroups() {
+    els.groupList.innerHTML = '';
+    if (!state.groups.length) {
+      els.groupList.innerHTML = '<div style="padding:22px;color:#7b818a;font-size:13px;text-align:center">조 목록을 생성해 주세요.</div>';
+      updateSelectedCount();
+      renderPreview();
+      return;
+    }
+
+    state.groups.forEach((group, index) => {
+      const row = document.createElement('div');
+      row.className = 'group-row' + (group.id === state.previewGroupId ? ' preview-active' : '');
+      row.dataset.id = group.id;
+      row.innerHTML = `
+        <input class="group-enabled" type="checkbox" ${group.enabled ? 'checked' : ''} aria-label="출력 여부" />
+        <input class="group-name-input" type="text" value="${escapeHtml(group.name)}" aria-label="조 명" />
+        <button class="row-delete" type="button" title="삭제">×</button>
+      `;
+
+      row.addEventListener('click', (e) => {
+        // 체크박스/텍스트 입력/삭제 버튼 조작 시에는 행 재렌더링을 하지 않음
+        // (체크박스 click 이후 change 이벤트가 실행되기 전에 DOM이 교체되는 문제 방지)
+        if (e.target.closest('input, button')) return;
+        state.previewGroupId = group.id;
+        renderGroups();
+      });
+
+      row.querySelector('.group-enabled').addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+
+      row.querySelector('.group-enabled').addEventListener('change', (e) => {
+        group.enabled = e.target.checked;
+        updateSelectedCount();
+      });
+
+      row.querySelector('.group-name-input').addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+
+      row.querySelector('.group-name-input').addEventListener('input', (e) => {
+        group.name = e.target.value;
+        if (state.previewGroupId === group.id) renderPreview();
+      });
+
+      row.querySelector('.row-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const wasPreview = state.previewGroupId === group.id;
+        state.groups.splice(index, 1);
+        if (wasPreview) state.previewGroupId = state.groups[0]?.id || null;
+        renderGroups();
+      });
+
+      els.groupList.appendChild(row);
+    });
+
+    updateSelectedCount();
+    renderPreview();
+  }
+
+  function generateGroups(count) {
+    const n = Math.max(1, Math.min(100, Number(count) || 1));
+    state.groups = Array.from({ length: n }, (_, i) => ({ id: uid(), name: `${i + 1}조`, enabled: true }));
+    state.previewGroupId = state.groups[0]?.id || null;
+    renderGroups();
+  }
+
+  function addGroup() {
+    const g = { id: uid(), name: `${state.groups.length + 1}조`, enabled: true };
+    state.groups.push(g);
+    state.previewGroupId = g.id;
+    renderGroups();
+    requestAnimationFrame(() => {
+      const last = els.groupList.lastElementChild;
+      if (last) last.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+  }
+
+  function syncColor(picker, text, fallback) {
+    picker.addEventListener('input', () => {
+      text.value = picker.value.toUpperCase();
+      renderPreview();
+    });
+    text.addEventListener('input', () => {
+      const v = text.value.trim();
+      if (isValidHex(v)) {
+        picker.value = v;
+        renderPreview();
+      }
+    });
+    text.addEventListener('blur', () => {
+      const v = normalizeHex(text.value, fallback);
+      text.value = v;
+      picker.value = v;
+      renderPreview();
+    });
+  }
+
+  // ----- Project storage -----
+  function readProjects() {
+    try { return JSON.parse(localStorage.getItem(PROJECT_STORAGE_KEY) || '{}'); }
+    catch { return {}; }
+  }
+
+  function writeProjects(projects) {
+    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify(projects));
+  }
+
+  function formatSavedAt(value) {
+    if (!value) return '';
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('ko-KR', {
+      year: 'numeric', month: '2-digit', day: '2-digit',
+      hour: '2-digit', minute: '2-digit'
+    }).format(d);
+  }
+
+  function renderSavedProjectsList() {
+    const projects = readProjects();
+    const entries = Object.entries(projects)
+      .sort((a,b) => String(b[1]?.savedAt || '').localeCompare(String(a[1]?.savedAt || '')));
+
+    els.savedProjectsList.innerHTML = '';
+
+    if (!entries.length) {
+      els.savedProjectsList.innerHTML = '<div class="saved-project-empty">저장된 프로젝트가 없습니다.</div>';
+      return;
+    }
+
+    entries.forEach(([name, project]) => {
+      const item = document.createElement('div');
+      item.className = 'saved-project-item';
+      const dateText = formatSavedAt(project?.savedAt);
+      item.innerHTML = `
+        <button class="saved-project-load-area" type="button" title="${escapeHtml(name)} 불러오기">
+          <div class="saved-project-meta">
+            <div class="saved-project-name">${escapeHtml(name)}</div>
+            <div class="saved-project-date">${escapeHtml(dateText)}</div>
+          </div>
+        </button>
+        <button class="btn btn-sm btn-danger saved-project-delete" type="button">삭제</button>
+      `;
+
+      item.querySelector('.saved-project-load-area').addEventListener('click', async () => {
+        await loadProject(name);
+        closeSavedProjectMenu();
+      });
+
+      item.querySelector('.saved-project-delete').addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteProjectByName(name);
+      });
+
+      els.savedProjectsList.appendChild(item);
+    });
+  }
+
+  function openSavedProjectMenu() {
+    renderSavedProjectsList();
+    els.savedProjectMenu.classList.add('open');
+    els.savedProjectTrigger.classList.add('open');
+    els.savedProjectTrigger.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeSavedProjectMenu() {
+    els.savedProjectMenu.classList.remove('open');
+    els.savedProjectTrigger.classList.remove('open');
+    els.savedProjectTrigger.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleSavedProjectMenu() {
+    if (els.savedProjectMenu.classList.contains('open')) closeSavedProjectMenu();
+    else openSavedProjectMenu();
+  }
+
+  function refreshSavedProjectMenu() {
+    renderSavedProjectsList();
+  }
+
+
+  function saveProject() {
+    const settings = getSettings();
+    if (!settings.projectName) {
+      setStatus('프로젝트명을 입력해 주세요.', 'error');
+      els.projectName.focus();
+      return;
+    }
+    const projects = readProjects();
+    if (projects[settings.projectName] && !confirm(`'${settings.projectName}' 프로젝트를 덮어쓸까요?`)) return;
+    projects[settings.projectName] = {
+      ...settings,
+      groups: state.groups.map(g => ({ name: g.name, enabled: g.enabled })),
+      savedAt: new Date().toISOString()
+    };
+    writeProjects(projects);
+    refreshSavedProjectMenu();
+    setStatus(`'${settings.projectName}' 프로젝트를 저장했습니다.`, 'success');
+  }
+
+  async function loadProject(name) {
+    const projects = readProjects();
+    const p = projects[name];
+    if (!p) return;
+    els.projectName.value = p.projectName || name;
+    els.programName.value = p.programName || '';
+
+    const mc = normalizeHex(p.mainColor, '#153E75');
+    els.mainColorHex.value = mc;
+    els.mainColorPicker.value = mc;
+    const pc = normalizeHex(p.programTextColor, '#FFFFFF');
+    els.programTextColorHex.value = pc;
+    els.programTextColorPicker.value = pc;
+
+    if (p.fontFamily) {
+      if (![...els.fontSelect.options].some(o => o.value === p.fontFamily)) {
+        addFontOption(p.fontFamily);
+      }
+      els.fontSelect.value = p.fontFamily;
+    }
+    els.boldCheckbox.checked = !!p.bold;
+    state.groups = Array.isArray(p.groups) && p.groups.length
+      ? p.groups.map(g => ({ id: uid(), name: g.name || '조', enabled: g.enabled !== false }))
+      : [{ id: uid(), name: '1조', enabled: true }];
+    state.previewGroupId = state.groups[0]?.id || null;
+    els.groupCount.value = state.groups.length;
+    renderGroups();
+    await document.fonts.ready;
+    renderPreview();
+    setStatus(`'${name}' 프로젝트를 불러왔습니다.`, 'success');
+  }
+
+  function deleteProjectByName(name) {
+    if (!name) return;
+    if (!confirm(`'${name}' 프로젝트를 삭제할까요?`)) return;
+    const projects = readProjects();
+    if (!projects[name]) return;
+    delete projects[name];
+    writeProjects(projects);
+    refreshSavedProjectMenu();
+    setStatus(`'${name}' 프로젝트를 삭제했습니다.`, 'success');
+  }
+
+
+  // ----- Font IndexedDB -----
+  function openDb() {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(FONT_STORE)) {
+          const store = db.createObjectStore(FONT_STORE, { keyPath: 'id', autoIncrement: true });
+          store.createIndex('family', 'family', { unique: false });
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  async function saveFontRecord(record) {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(FONT_STORE, 'readwrite');
+      tx.objectStore(FONT_STORE).add(record);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  async function getAllFontRecords() {
+    const db = await openDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(FONT_STORE, 'readonly');
+      const req = tx.objectStore(FONT_STORE).getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+
+  function inferFontMeta(fileName) {
+    const stem = fileName.replace(/\.(ttf|otf|woff2?|TTF|OTF|WOFF2?)$/, '');
+    const isBold = /(^|[-_\s])(bold|700|semibold|semi-bold|extrabold|extra-bold)([-_\s]|$)/i.test(stem);
+    const weight = isBold ? 700 : 400;
+    let family = stem
+      .replace(/[-_\s](bold|700|semibold|semi-bold|extrabold|extra-bold|regular|400|medium|500)$/i, '')
+      .replace(/[-_]+/g, ' ')
+      .trim();
+    if (!family) family = stem;
+    return { family, weight };
+  }
+
+  function addFontOption(family) {
+    if ([...els.fontSelect.options].some(o => o.value === family)) return;
+    const option = document.createElement('option');
+    option.value = family;
+    option.textContent = family;
+    els.fontSelect.appendChild(option);
+  }
+
+  async function registerFontRecord(record) {
+    const url = URL.createObjectURL(record.blob);
+    const face = new FontFace(record.family, `url(${url})`, { weight: String(record.weight || 400), style: 'normal' });
+    try {
+      await face.load();
+      document.fonts.add(face);
+      const info = state.fonts.get(record.family) || { 400: false, 700: false };
+      info[record.weight || 400] = true;
+      state.fonts.set(record.family, info);
+      addFontOption(record.family);
+      return true;
+    } catch (err) {
+      console.error('Font load failed', record.fileName, err);
+      return false;
+    }
+  }
+
+  async function restoreFonts() {
+    try {
+      const records = await getAllFontRecords();
+      for (const record of records) await registerFontRecord(record);
+      if (records.length) els.fontStatus.textContent = `저장된 외부 폰트 ${records.length}개 파일을 불러왔습니다.`;
+    } catch (err) {
+      console.warn('Cannot restore fonts', err);
+    }
+  }
+
+  async function handleFontFiles(files) {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    els.fontUploadList.innerHTML = '';
+    let successCount = 0;
+    for (const file of list) {
+      const meta = inferFontMeta(file.name);
+      const record = { family: meta.family, weight: meta.weight, fileName: file.name, blob: file, savedAt: new Date().toISOString() };
+      const loaded = await registerFontRecord(record);
+      if (loaded) {
+        await saveFontRecord(record);
+        successCount++;
+      }
+      const chip = document.createElement('div');
+      chip.className = 'font-chip';
+      chip.textContent = `${loaded ? '✓' : '✕'} ${file.name} → ${meta.family} / ${meta.weight}`;
+      els.fontUploadList.appendChild(chip);
+    }
+    if (successCount) {
+      const lastFamily = inferFontMeta(list[list.length - 1].name).family;
+      els.fontSelect.value = lastFamily;
+      renderPreview();
+      els.fontStatus.textContent = `외부 폰트 ${successCount}개 파일을 추가했습니다.`;
+    }
+  }
+
+  // ----- Print -----
+  async function buildPrintPages() {
+    const selected = state.groups.filter(g => g.enabled && g.name.trim());
+    if (!selected.length) throw new Error('출력할 조를 하나 이상 선택해 주세요.');
+    const settings = getSettings();
+    els.printContainer.innerHTML = '';
+    selected.forEach(group => {
+      const page = document.createElement('div');
+      page.className = 'nameplate-page';
+      page.innerHTML = nameplateMarkup(group.name, settings.programName);
+      applyCssVariables(page, settings);
+      els.printContainer.appendChild(page);
+    });
+    await document.fonts.ready;
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    $$('#printContainer .nameplate-page').forEach(fitAllText);
+  }
+
+  async function printNameplates() {
+    try {
+      setStatus('인쇄용 명패를 준비하고 있습니다…');
+      await buildPrintPages();
+      setStatus('인쇄창에서 용지 A5 / 배율 100%를 확인해 주세요.', 'success');
+      setTimeout(() => window.print(), 100);
+    } catch (err) {
+      setStatus(err.message || String(err), 'error');
+    }
+  }
+
+  // ----- Events -----
+  syncColor(els.mainColorPicker, els.mainColorHex, '#153E75');
+  syncColor(els.programTextColorPicker, els.programTextColorHex, '#FFFFFF');
+
+  els.projectName.addEventListener('input', () => setStatus(''));
+  els.programName.addEventListener('input', renderPreview);
+  els.fontSelect.addEventListener('change', async () => { await document.fonts.ready; renderPreview(); });
+  els.boldCheckbox.addEventListener('change', renderPreview);
+
+  $('#generateGroupsBtn').addEventListener('click', () => generateGroups(els.groupCount.value));
+  $('#addGroupBtn').addEventListener('click', addGroup);
+  $('#selectAllBtn').addEventListener('click', () => { state.groups.forEach(g => g.enabled = true); renderGroups(); });
+  $('#clearAllBtn').addEventListener('click', () => { state.groups.forEach(g => g.enabled = false); renderGroups(); });
+
+  $('#printBtn').addEventListener('click', printNameplates);
+  $('#saveProjectBtn').addEventListener('click', saveProject);
+  els.savedProjectTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    toggleSavedProjectMenu();
+  });
+  els.savedProjectMenu.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', () => closeSavedProjectMenu());
+
+  $('#openFontModalBtn').addEventListener('click', () => els.fontModal.classList.add('open'));
+  $('#closeFontModalBtn').addEventListener('click', () => els.fontModal.classList.remove('open'));
+  els.fontModal.addEventListener('click', (e) => { if (e.target === els.fontModal) els.fontModal.classList.remove('open'); });
+  els.fontFileInput.addEventListener('change', (e) => handleFontFiles(e.target.files));
+
+  window.addEventListener('afterprint', () => { els.printContainer.innerHTML = ''; });
+
+  // ----- Init -----
+  async function init() {
+    refreshSavedProjectMenu();
+    generateGroups(1);
+    try { await restoreFonts(); } catch {}
+    renderPreview();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

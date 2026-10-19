@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CLIPS 업무 도구</title>
+  <style>
+    @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+    :root { --navy:#0f2a52; --blue:#2f6fed; --bg:#f4f6f8; --border:#d9dee5; --muted:#6b7684; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body { font-family: 'Pretendard', Arial, sans-serif; background: var(--bg); display: flex; flex-direction: column; color:#191f28; }
+    header { background: var(--navy); color:#fff; display:flex; align-items:center; gap:28px; padding:0 24px; height:56px; flex:none; }
+    .logo { font-weight:800; font-size:18px; letter-spacing:-0.02em; }
+    nav { display:flex; gap:4px; height:100%; }
+    nav button { background:none; border:0; color:#b9c6dd; font:inherit; font-weight:700; font-size:14px; padding:0 18px; cursor:pointer; border-bottom:3px solid transparent; }
+    nav button:hover { color:#fff; }
+    nav button.active { color:#fff; border-bottom-color:var(--blue); }
+    .spacer { flex:1; }
+    .ext { color:#b9c6dd; font-size:12px; text-decoration:none; border:1px solid #3a5583; padding:6px 12px; border-radius:8px; }
+    .ext:hover { color:#fff; border-color:#fff; }
+    main { flex:1; position:relative; min-height:0; }
+    iframe { position:absolute; inset:0; width:100%; height:100%; border:0; background:#fff; display:none; }
+    iframe.active { display:block; }
+    .notice { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:13px; color:var(--muted); box-shadow:0 6px 20px rgba(0,0,0,.1); display:none; align-items:center; gap:12px; z-index:5; }
+    .notice.show { display:flex; }
+    .notice a { background:var(--blue); color:#fff; text-decoration:none; padding:7px 12px; border-radius:8px; font-weight:700; white-space:nowrap; }
+    .notice .x { background:none; border:0; cursor:pointer; color:var(--muted); font-size:16px; }
+    @media (max-width:640px){ header{gap:10px;padding:0 10px} .logo{font-size:15px} nav button{padding:0 10px;font-size:13px} .ext{display:none} }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">CLIPS 업무 도구</div>
+    <nav>
+      <button data-tab="badge">명찰 제작</button>
+      <button data-tab="nameplate">조별 명패</button>
+    </nav>
+    <div class="spacer"></div>
+    <a class="ext" id="ext" target="_blank" rel="noopener">새 창으로 열기 ↗</a>
+  </header>
+  <main>
+    <iframe id="badge" title="명찰 제작" data-src="https://script.google.com/a/macros/clipsgroup.co.kr/s/AKfycbxkigI_H4nQYkO50NJI6iS9URRn0IojYIpwCWIPf1P0tyqx5e0i52F2W50A5tgCk18/exec"></iframe>
+    <iframe id="nameplate" title="조별 명패" data-src="apps/nameplate.html"></iframe>
+    <div class="notice" id="notice">
+      <span>명찰 제작 화면이 보이지 않으면 Google 로그인/보안 정책 때문일 수 있어요.</span>
+      <a id="noticeLink" target="_blank" rel="noopener">새 창에서 열기</a>
+      <button class="x" id="noticeClose" aria-label="닫기">✕</button>
+    </div>
+  </main>
+  <script>
+    const frames = { badge: document.getElementById('badge'), nameplate: document.getElementById('nameplate') };
+    const ext = document.getElementById('ext'), notice = document.getElementById('notice'), noticeLink = document.getElementById('noticeLink');
+    function show(tab) {
+      if (!frames[tab]) tab = 'badge';
+      for (const [k, f] of Object.entries(frames)) {
+        f.classList.toggle('active', k === tab);
+        if (k === tab && !f.src) f.src = f.dataset.src;
+      }
+      document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+      ext.href = noticeLink.href = frames[tab].dataset.src;
+      notice.classList.toggle('show', tab === 'badge');
+      document.title = (tab === 'badge' ? '명찰 제작' : '조별 명패') + ' · CLIPS 업무 도구';
+      if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
+    }
+    document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
+    document.getElementById('noticeClose').onclick = () => notice.classList.remove('show');
+    window.addEventListener('hashchange', () => show(location.hash.slice(1)));
+    show(location.hash.slice(1) || 'badge');
+  </script>
+</body>
+</html>
