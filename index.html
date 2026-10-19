@@ -22,10 +22,6 @@
     main { flex:1; position:relative; min-height:0; }
     iframe { position:absolute; inset:0; width:100%; height:100%; border:0; background:#fff; display:none; }
     iframe.active { display:block; }
-    .notice { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); background:#fff; border:1px solid var(--border); border-radius:12px; padding:10px 14px; font-size:13px; color:var(--muted); box-shadow:0 6px 20px rgba(0,0,0,.1); display:none; align-items:center; gap:12px; z-index:5; }
-    .notice.show { display:flex; }
-    .notice a { background:var(--blue); color:#fff; text-decoration:none; padding:7px 12px; border-radius:8px; font-weight:700; white-space:nowrap; }
-    .notice .x { background:none; border:0; cursor:pointer; color:var(--muted); font-size:16px; }
     @media (max-width:640px){ header{gap:10px;padding:0 10px} .logo{font-size:15px} nav button{padding:0 10px;font-size:13px} .ext{display:none} }
   </style>
 </head>
@@ -42,15 +38,10 @@
   <main>
     <iframe id="badge" title="명찰 제작" data-src="https://script.google.com/a/macros/clipsgroup.co.kr/s/AKfycbxkigI_H4nQYkO50NJI6iS9URRn0IojYIpwCWIPf1P0tyqx5e0i52F2W50A5tgCk18/exec"></iframe>
     <iframe id="nameplate" title="조별 명패" data-src="apps/nameplate.html"></iframe>
-    <div class="notice" id="notice">
-      <span>명찰 제작 화면이 보이지 않으면 Google 로그인/보안 정책 때문일 수 있어요.</span>
-      <a id="noticeLink" target="_blank" rel="noopener">새 창에서 열기</a>
-      <button class="x" id="noticeClose" aria-label="닫기">✕</button>
-    </div>
   </main>
   <script>
     const frames = { badge: document.getElementById('badge'), nameplate: document.getElementById('nameplate') };
-    const ext = document.getElementById('ext'), notice = document.getElementById('notice'), noticeLink = document.getElementById('noticeLink');
+    const ext = document.getElementById('ext');
     function show(tab) {
       if (!frames[tab]) tab = 'badge';
       for (const [k, f] of Object.entries(frames)) {
@@ -58,13 +49,11 @@
         if (k === tab && !f.src) f.src = f.dataset.src;
       }
       document.querySelectorAll('nav button').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
-      ext.href = noticeLink.href = frames[tab].dataset.src;
-      notice.classList.toggle('show', tab === 'badge');
+      ext.href = frames[tab].dataset.src;
       document.title = (tab === 'badge' ? '명찰 제작' : '조별 명패') + ' · CLIPS 업무 도구';
       if (location.hash !== '#' + tab) history.replaceState(null, '', '#' + tab);
     }
     document.querySelectorAll('nav button').forEach(b => b.onclick = () => show(b.dataset.tab));
-    document.getElementById('noticeClose').onclick = () => notice.classList.remove('show');
     window.addEventListener('hashchange', () => show(location.hash.slice(1)));
     show(location.hash.slice(1) || 'badge');
   </script>
